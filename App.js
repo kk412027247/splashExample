@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import SplashScreen from 'react-native-splash-screen'
 
-
 const instructions = Platform.select({
   ios: 'Press Cmd+R to reload,\n' +
     'Cmd+D or shake for dev menu',
@@ -20,10 +19,11 @@ type Props = {};
 // noinspection JSAnnotator
 export default class App extends Component<Props> {
 
+
   componentDidMount() {
-    // 组件加载完毕之后，隐藏启动页
-    SplashScreen.hide();
-  }
+     // 组件加载完毕之后，隐藏启动页
+     SplashScreen.hide();
+   }
   render() {
     return (
       <View style={styles.container}>
