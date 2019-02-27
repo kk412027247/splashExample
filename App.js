@@ -17,7 +17,7 @@ export default class App extends Component<Props> {
   state = {receivedBytes : 0, totalBytes : 0, showProcess: false, showIndicator:false};
 
   handleUpdate = async () => {
-
+    this.setState({showIndicator: true});
     try {
 
       // checkForUpdate 返回promise，包含了服务端安装包的各种信息，包的大小版本之类的,
@@ -48,14 +48,8 @@ export default class App extends Component<Props> {
         // 第二个参数，更新状态检测，返回数字
         //0 已经是最新，1 安装完成、等待生效，2 忽略更新，3 未知错误，4 已经在下载了，5 查询更新，6 弹出了更新确认界面，7 下载中，8下载完成
         (status)=>{
-          console.log('SyncStatusChanged: ', status);
-          if(status===5){
-            this.setState({showIndicator: true})
-          }else{
-            this.setState({showIndicator: false})
-          }
-          switch (status){
 
+          switch (status){
             case 0: alert('已经是最新版本');
               break;
 
@@ -85,7 +79,7 @@ export default class App extends Component<Props> {
     }
     // 执行更新
 
-
+    this.setState({showIndicator: false});
   };
 
   componentDidMount() {
