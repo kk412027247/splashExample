@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Platform, StyleSheet, Text, View, StatusBar, Button, ActivityIndicator} from 'react-native';
+import {Platform, StyleSheet, Text, View, StatusBar, Button, ActivityIndicator,} from 'react-native';
 import SplashScreen from 'react-native-splash-screen';
 import CodePush from "react-native-code-push";
 
@@ -99,7 +99,7 @@ export default class App extends Component<Props> {
 
         {
           !this.state.showIndicator
-          ? <Button title={'update'} onPress={this.handleUpdate} color={'#fff'}/>
+          ? <Button title={'update'} onPress={this.handleUpdate} color={Platform.OS === 'ios' ? '#fff' : '#000'}/>
           : <ActivityIndicator size={'large'} color={'#fff'}/>
         }
 
