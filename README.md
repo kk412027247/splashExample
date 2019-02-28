@@ -280,38 +280,7 @@ mipmap-xxhdpi = splash@3x.png
 ```
 >  这个页面会和启动页一起弹起，并且挡在启动页前面，所以要把这页设成透明。
  
-- 接下来编辑 `splashExample/android/app/src/main/AndroidManifest.xml` ，代码如下
 
-
-```
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.splashexample">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
-
-    <application
-      android:name=".MainApplication"
-      android:label="@string/app_name"
-      android:icon="@mipmap/ic_launcher"
-      android:roundIcon="@mipmap/ic_launcher_round"
-      android:allowBackup="false"
-      android:theme="@style/AppTheme">
-      <activity
-        android:name=".MainActivity"
-        android:label="@string/app_name"
-        android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
-        android:windowSoftInputMode="adjustResize">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-      </activity>
-      <activity android:name="com.facebook.react.devsupport.DevSettingsActivity" />
-    </application>
-
-</manifest>
-```
 - 编辑`/splashExample/android/app/src/main/java/com/splashexample/MainActivity.java`
 
 ```
@@ -348,5 +317,216 @@ public class MainActivity extends ReactActivity {
 ![1_tfH-JhMPyMZrJmDAPviQ0w.gif](https://upload-images.jianshu.io/upload_images/7505289-f3e813f510cecd52.gif?imageMogr2/auto-orient/strip)
 
 
-最后附上项目的github地址
-[splashExample](https://github.com/kk412027247/splashExample)
+---
+ # 轻松配置react-native热更新
+
+
+> react-native项目有个优势就是可以动态更新bundle.js，从而更新App。
+
+![1.gif](https://upload-images.jianshu.io/upload_images/7505289-4109595c19e6ddd7.gif?imageMogr2/auto-orient/strip)
+
+### 框架选择
+- 使用微软出的热更新套件 [react-native-code-push](https://github.com/Microsoft/react-native-code-push)
+- 框架包括客户端SDK，以及配套的服务端。
+
+### 服务端配置
+
+- 要使用`code push`服务，必须在服务端配置好`app`的信息。
+- 安装`App Center CLI`，用于服务端信息管理。
+```
+$ sudo npm install -g appcenter-cli
+```
+- 登陆`app cetner`。
+```
+$ appcenter login
+```
+- 运行以上命令并在命令行确认后，网页会弹出一个要求登陆的页面，登陆后，会得到一串`Access code`，复制粘贴回命令行，成功的话会返回登陆账号。
+
+```
+$ appcenter login
+Opening your browser... 
+? [Visit]:https://appcenter.ms/cli-login?hostname=assetfundeMacBook-Pro.local and enter the code:
+? Access code from browser:  0cd185da****36a****7295b3****c8da9ba766a
+Logged in as kk412027247
+```
+- 添加`App`信息，这里要分别添加`安卓`与`iOS`，我的`app`名字是`splashExample `,以此为例
+```
+// -d 后面接的是app显示的名字，为了区分不同平台后面也写上平台命
+// -o 表示运行系统（operation） 安卓/iOS
+// -p 表示平台（Platform）这里是 react-native
+$ appcenter apps create -d splashExample-android -o Android -p React-Native
+$ appcenter apps create -d splashExample-ios -o iOS -p React-Native
+```
+- 接下来运行一下`appcenter apps list`检测是否添加成功
+```
+  $  appcenter apps list
+  kk412027247/splashExample-android
+  kk412027247/splashExample-ios
+```
+- 将已添加的`app`部署热更新服务，一般会部署两个用于灰度更新，和正式更新，这里分别叫做`Staging`与`Production`。分别给安卓和iOS部署，所以一共要运行四行命令。
+> 建议部署其中一个叫做`Staging`，命令行一些默认行为会执行这个部署，如果没有这个名称，推送更新到部署的时候，要指定部署的名称，若不指定则会报错。
+```
+// -a 是指应用（application），这里要写上“用户名和程序名”
+
+// 部署IOS
+$ appcenter codepush deployment add -a kk412027247/splashExample-ios Staging
+$ appcenter codepush deployment add -a kk412027247/splashExample-ios Production
+// 部署安卓
+$ appcenter codepush deployment add -a kk412027247/splashExample-android Staging
+$ appcenter codepush deployment add -a kk412027247/splashExample-android Production
+
+```
+- 获取`部署码`，运行以上命令之后，命令行会返`部署码`，但是有可能没记下就关掉了命令行
+- `appcenter codepush deployment list -a <ownerName>/<appName> <deploymentName> -k`命令可以查看部署码
+
+```
+$ appcenter codepush deployment list -a kk412027247/splashExample-ios -k
+```
+Name|Key
+-|-
+Staging|mgqluuNp1DTWNA5xn_c2YWWyLKGxBJA67O7UN
+Production|miDM42DG-ooHvW0VVa0tdPNAgRH2BJJ6j_X8V
+```
+$ appcenter codepush deployment list -a kk412027247/splashExample-android -k
+```
+Name|Key
+-|-
+Staging|2CFJps8zo4gguRDddWp7POP0psZCrJnAXOQIE
+Production|cskcQEjzC5kbOelsPgwA4zaDac6SS1ow0tQIV 
+> 运行了一堆命令，最终得到这两组四个`部署码`，接下来须要将这些`部署码`按需配置到客户端里面。
+---
+### 客户端安装与配置
+
+- 安装依赖包
+```
+$ npm install --save react-native-code-push
+$ react-native link
+```
+> 运行`react-native link`的时候，命令行会提示输入部署码`What is your CodePush deployment key for Android (hit <ENTER> to ignore) `，这个提示只是第一次输入有效。
+
+- 填写`部署码`，我这里都是输入`Staging`的`部署码`。如果是正式环境，建议写`Production`的`部署码`。
+  - iOS平台，修改 `/splashExample/ios/splashExample/Info.plist` 文件,`CodePushDeploymentKey` 标签的值。
+![iosDeploymentKey.png](https://upload-images.jianshu.io/upload_images/7505289-d18f111e1998ca05.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+  - 安卓平台，修改 `/splashExample/android/app/src/main/java/com/splashexample/MainApplication.java`。
+![androidDeploymentKey.png](https://upload-images.jianshu.io/upload_images/7505289-b1fbc97dc5815a06.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+- `api`调用（安静模式）
+```
+import CodePush from "react-native-code-push";
+// 静默方式，app每次启动的时候，都检测一下更新 'ON_APP_RESUME'
+const codePushOptions = { checkFrequency: CodePush.CheckFrequency.ON_APP_RESUME };
+import _App from './App';
+// 在组件根节点的地方设置热更新。
+const App = CodePush(codePushOptions)(_App);
+```
+- 这个安静模式是我最喜欢一种，配置简单，在用户没察觉的情况下就更新了app。在用户打开app的时候，自动下载更新包，下次再启动的时候自动安装更新包。
+![0.gif](https://upload-images.jianshu.io/upload_images/7505289-2e2d65dd84c3d02b.gif?imageMogr2/auto-orient/strip)
+
+- `api`调用（自定义模式），在更新之前可以获取更新包的大小，更新的具体信息，监听下载进度等等。
+```
+import CodePush from "react-native-code-push";
+...
+
+  state = {receivedBytes : 0, totalBytes : 0, showProcess: false, showIndicator:false};
+
+  _handleUpdate = async () => {
+    this.setState({showIndicator: true});
+
+    // checkForUpdate 返回promise，包含了服务端安装包的各种信息，包的大小版本之类的,
+    // 如果要构建构建个性化更新界面，需要用到此方法
+    const updateMessage = await CodePush.checkForUpdate() || {};
+
+    // console.log(updateMessage);
+    // return;
+
+    // 执行更新
+    await CodePush.sync(
+      // 第一个参数吗，是个对象，可定义更新的动作
+      {
+        // 安装模式 'IMMEDIATE' 立刻安装， ON_NEXT_RESUME 下次启动安装
+        installMode: CodePush.InstallMode.ON_NEXT_RESUME,
+
+        // 强制更新模式下的安装，默认是IMMEDIATE 直接安装
+        mandatoryInstallMode: CodePush.InstallMode.IMMEDIATE,
+
+        //更新确认弹窗设置，设置系统自带弹窗中的内容
+        updateDialog:{
+          mandatoryUpdateMessage:'强制更新内容: '+updateMessage.description,
+          mandatoryContinueButtonLabel:'强制更新/确认',
+          optionalIgnoreButtonLabel:'取消',
+          optionalInstallButtonLabel:'安装',
+          optionalUpdateMessage:'本次更新内容: '+updateMessage.description,
+          title:'发现新版本'
+        }},
+      // 第二个参数，更新状态检测，返回数字
+      //0 已经是最新，1 安装完成、等待生效，2 忽略更新，3 未知错误，4 已经在下载了，5 查询更新，6 弹出了更新确认界面，7 下载中，8下载完成
+      (status)=>{
+
+        switch (status){
+          case 0: alert('已经是最新版本');
+            break;
+          case 1 : !updateMessage.isMandatory && alert('更新完成, 再启动APP更新即生效');
+            break;
+          case 3: alert('出错了，未知错误');
+            break;
+          case 7 : this.setState({showProcess: true});
+            break;
+          case 8 : this.setState({showProcess: false});
+            break;
+        }
+      },
+      // 第三个参数，检测下载过程
+      ({receivedBytes,totalBytes})=>{
+        // console.log('DownloadProgress: ', receivedBytes, totalBytes);
+        this.setState({receivedBytes: (receivedBytes/1024).toFixed(2), totalBytes: (totalBytes/1024).toFixed(2)})
+      },
+    );
+    this.setState({showIndicator: false});
+  };
+
+  handleUpdate = () => this._handleUpdate().catch(()=>{
+    this.setState({showIndicator: false});
+    alert('网络错误')
+  });
+```
+- 这个配置稍微复杂一点，但是自定义程度很高，比如要做下载滚动条，查看更新日志，都可以实现。默认情况下，再次启动app的时候，更新生效。
+![1.gif](https://upload-images.jianshu.io/upload_images/7505289-4109595c19e6ddd7.gif?imageMogr2/auto-orient/strip)
+### 推送更新
+> 设置完客户端之后，须要在服务端推送更细，客户端才能检测到更新。以上效果都是已经从服务端做了更新推送的。
+- 推送命令，在项目根目录运行 `appcenter codepush release-react -a <ownerName>/MyApp`。
+```
+//  在默认情况下，更新会推送到Staging的部署
+$ appcenter codepush release-react -a kk412027247/splashExample-ios
+$ appcenter codepush release-react -a kk412027247/splashExample-android
+
+//  指定版本更新 -d 加部署名
+$ appcenter codepush release-react -a kk412027247/splashExample-ios -d Production
+$ appcenter codepush release-react -a kk412027247/splashExample-android -d Production
+
+// 设置更新日志，供前端读取
+$ appcenter codepush release-react -a kk412027247/splashExample-ios  --description '1800的更新'
+$ appcenter codepush release-react -a kk412027247/splashExample-android  --description '1800的更新'
+```
+- 强制更新，在项目根目录运行 `appcenter codepush release-react -a <ownerName>/MyApp -m true`
+- 其实就是多了个`-m true` 参数而已，强制更新的默认效果是，用弹窗确认更新时候，只有确认键，并且安装成功后是立即生效，所以app可能会闪一下。
+```
+$ appcenter codepush release-react -a kk412027247/splashExample-ios -m true  --description '1052的更新'
+$ appcenter codepush release-react -a kk412027247/splashExample-android -m true  --description '1052的更新'
+```
+![2.gif](https://upload-images.jianshu.io/upload_images/7505289-3c70f14c65409c76.gif?imageMogr2/auto-orient/strip)
+
+- 查看更新看历史`appcenter codepush deployment history -a <ownerName>/<appName> <deploymentName>
+`
+```
+// 显示历史
+$ appcenter codepush deployment history -a kk412027247/splashExample-ios Staging
+
+// 清空历史
+$ appcenter codepush deployment clear Staging -a kk412027247/splashExample-ios
+```
+### 官方资料
+
+[React Native Client SDK安装与配置](https://docs.microsoft.com/en-us/appcenter/distribution/codepush/react-native#getting-started)
+[App Center CLI安装与配置](https://docs.microsoft.com/en-us/appcenter/distribution/codepush/cli)
+[js api](https://github.com/Microsoft/react-native-code-push/blob/master/docs/api-js.md#syncstatus)
+
